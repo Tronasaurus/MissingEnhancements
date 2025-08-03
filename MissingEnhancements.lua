@@ -1,4 +1,3 @@
-
 local TAILORING_CLOAK_ENCHANTS = {
   "Lightweave", "Swordguard", "Darkglow", "Embroidery",
   "Master's Inscription", "Shadowleather", "Zebraweave",
@@ -6,23 +5,12 @@ local TAILORING_CLOAK_ENCHANTS = {
 }
 
 local SHIELD_ENHANCEMENTS = {
-  "Shield Spike",                -- generic
-  "Ghost Iron Shield Spike",
-  "Eternal Earthshield Spike",
-  "Titanium Plating",
-  "Vitality",
-  "Block",
-  "Spirit",
-  "Intellect",
-  "Minor Stamina",
-  "Stamina",
-  "Resilience",
-  "Resistance",
-  "when you block",
-  "Deals damage"
+  "Shield Spike", "Ghost Iron Shield Spike", "Eternal Earthshield Spike",
+  "Titanium Plating", "Vitality", "Block", "Spirit", "Intellect",
+  "Minor Stamina", "Stamina", "Resilience", "Resistance",
+  "when you block", "Deals damage"
 }
 
--- Existing setup
 local SLOT_FRAMES = {
   [1] = "CharacterHeadSlot",
   [3] = "CharacterShoulderSlot",
@@ -37,6 +25,12 @@ local SLOT_FRAMES = {
   [15] = "CharacterBackSlot",
   [16] = "CharacterMainHandSlot",
   [17] = "CharacterSecondaryHandSlot"
+}
+
+local SLOT_IS_LEFT = {
+  [1] = true, [3] = true, [5] = true, [6] = true,
+  [7] = true, [8] = true, [9] = true, [10] = true,
+  [11] = true, [12] = true
 }
 
 local labels = {}
@@ -90,6 +84,16 @@ local function isCloakMissingTailoring()
   return not tooltipContains(15, TAILORING_CLOAK_ENCHANTS)
 end
 
+local function isCloakMissingTinker()
+  return not tooltipContains(15, { "Tinker", "Use:", "Nitro Boosts", "Synapse Springs" })
+end
+
+local function isCloakMissingEnchant()
+  local link = GetInventoryItemLink("player", 15)
+  local enchant = getEnchantIDFromLink(link)
+  return enchant == nil or enchant == "0" or enchant == ""
+end
+
 local function isShield()
   local link = GetInventoryItemLink("player", 17)
   if not link then return false end
@@ -102,7 +106,6 @@ local function isShieldMissingEnhancement()
   local enchantID = getEnchantIDFromLink(link)
   return enchantID == nil or enchantID == "0" or enchantID == ""
 end
-
 
 local function isWeaponMissingEnchant(slotID)
   local link = GetInventoryItemLink("player", slotID)
@@ -124,13 +127,18 @@ local function isSlotMissingEnchant(slotID)
 end
 
 local function clearLabels()
-  for _, fontString in pairs(labels) do
-    fontString:Hide()
+  for _, fontStrings in pairs(labels) do
+    for _, fs in ipairs(fontStrings) do
+      fs:Hide()
+    end
   end
 end
 
 local function updateTextLabels()
+  if not CharacterFrame:IsVisible() then return end
+
   clearLabels()
+  labels = {}
 
   local level = UnitLevel("player")
   local isEngineer = hasProfession(202)
@@ -142,81 +150,99 @@ local function updateTextLabels()
     if slotFrame then
       local itemLink = GetInventoryItemLink("player", slotID)
       if itemLink then
-        local needsLabel = false
-        local labelText = ""
+        local labelList = {}
 
-        if slotID == 6 and isEngineer then
-          if isBeltMissingTinker() then
-            needsLabel = true
-            labelText = "Missing Tinker"
+        if slotID == 6 and isEngineer and isBeltMissingTinker() then
+          table.insert(labelList, "Missing Tinker")
+        end
+
+        if (slotID == 11 or slotID == 12) and isEnchanter and isSlotMissingEnchant(slotID) then
+          table.insert(labelList, "Missing Enchant")
+        end
+
+        if slotID == 15 then
+          if isTailor and isCloakMissingTailoring() then
+            table.insert(labelList, "Missing Embroidery")
           end
-        elseif (slotID == 11 or slotID == 12) and isEnchanter then
-          if isSlotMissingEnchant(slotID) then
-            needsLabel = true
-            labelText = "Missing Enchant"
+          if isEngineer and isCloakMissingTinker() then
+            table.insert(labelList, "Missing Tinker")
           end
-        elseif slotID == 15 and isTailor then
-          if isCloakMissingTailoring() then
-            needsLabel = true
-            labelText = "Missing Embroidery"
-          end
-        elseif slotID == 16 then
-          if isWeaponMissingEnchant(16) then
-            needsLabel = true
-            labelText = "Missing Weapon Enchant"
-          end
-        elseif slotID == 17 then
-          if isShield() then
-            if isShieldMissingEnhancement() then
-              needsLabel = true
-              labelText = "Missing Shield Enchant"
-            end
-          else
-            if isWeaponMissingEnchant(17) then
-              needsLabel = true
-              labelText = "Missing Weapon Enchant"
-            end
-          end
-        elseif slotID ~= 6 and slotID ~= 11 and slotID ~= 12 and slotID ~= 15 and slotID ~= 16 and slotID ~= 17 then
-          if isSlotEnchantRequired(slotID, level) and isSlotMissingEnchant(slotID) then
-            needsLabel = true
-            labelText = "Missing Enchant"
+          if isCloakMissingEnchant() then
+            table.insert(labelList, "Missing Enchant")
           end
         end
 
-        if needsLabel then
-          if not labels[slotID] then
-            local text = slotFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            text:SetTextColor(1, 0.1, 0.1, 1)
-            text:SetScale(0.9)
-            text:SetShadowColor(0, 0, 0, 1)
-            text:SetShadowOffset(1, -1)
-            labels[slotID] = text
-          end
+        if slotID == 16 and isWeaponMissingEnchant(16) then
+          table.insert(labelList, "Missing Weapon Enchant")
+        end
 
-          local label = labels[slotID]
-          label:SetText(labelText)
-          label:ClearAllPoints()
-
-          if slotID == 16 then
-            label:SetPoint("RIGHT", slotFrame, "LEFT", -4, 0)
-          elseif slotID == 17 then
-            label:SetPoint("LEFT", slotFrame, "RIGHT", 4, 0)
-          else
-            if slotFrame:GetLeft() < CharacterFrame:GetWidth() / 2 then
-              label:SetPoint("LEFT", slotFrame, "RIGHT", 4, 0)
-            else
-              label:SetPoint("RIGHT", slotFrame, "LEFT", -4, 0)
+        if slotID == 17 then
+          if isShield() then
+            if isShieldMissingEnhancement() then
+              table.insert(labelList, "Missing Shield Enchant")
             end
+          elseif isWeaponMissingEnchant(17) then
+            table.insert(labelList, "Missing Weapon Enchant")
           end
+        end
 
-          label:Show()
+        if slotID ~= 6 and slotID ~= 11 and slotID ~= 12 and slotID ~= 15 and slotID ~= 16 and slotID ~= 17 then
+          if isSlotEnchantRequired(slotID, level) and isSlotMissingEnchant(slotID) then
+            table.insert(labelList, "Missing Enchant")
+          end
+        end
+
+        if #labelList > 0 then
+          labels[slotID] = {}
+
+          for i, text in ipairs(labelList) do
+            local label = slotFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            label:SetTextColor(1, 0.5, 0, 1) -- Legendary orange
+            label:SetScale(0.9)
+            label:SetShadowColor(0, 0, 0, 1)
+            label:SetShadowOffset(1, -1)
+            label:SetText(text)
+            label:ClearAllPoints()
+
+            local xOffset, point, relativePoint
+            if slotID == 16 then
+              point, relativePoint, xOffset = "RIGHT", "LEFT", 4
+            elseif slotID == 17 then
+              point, relativePoint, xOffset = "LEFT", "RIGHT", 4
+            else
+              if SLOT_IS_LEFT[slotID] then
+                point, relativePoint, xOffset = "LEFT", "RIGHT", 4
+              else
+                point, relativePoint, xOffset = "RIGHT", "LEFT", -4
+              end
+            end
+
+            local verticalOffset
+            if slotID == 15 then
+              local cloakOffsets = {
+                ["Missing Embroidery"] = 10,
+                ["Missing Tinker"]     = -2,
+                ["Missing Enchant"]    = -14
+              }
+              verticalOffset = cloakOffsets[text] or 0
+            else
+              verticalOffset = (#labelList - i) * 10
+            end
+
+            if slotID == 15 then
+              label:SetPoint("LEFT", slotFrame, "RIGHT", 4, verticalOffset)
+            else
+              label:SetPoint(point, slotFrame, relativePoint, xOffset, verticalOffset)
+            end
+
+            label:Show()
+            table.insert(labels[slotID], label)
+          end
         end
       end
     end
   end
 end
-
 
 local debounceTimer = nil
 
@@ -236,11 +262,15 @@ frame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 frame:RegisterEvent("UNIT_INVENTORY_CHANGED")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
-frame:SetScript("OnEvent", function(self, event, arg1, arg2)
+frame:SetScript("OnEvent", function(self, event)
   if event == "PLAYER_LOGIN" then
     CharacterFrame:HookScript("OnShow", updateTextLabels)
-  elseif event == "PLAYER_EQUIPMENT_CHANGED" or event == "UNIT_INVENTORY_CHANGED" or event == "PLAYER_ENTERING_WORLD" then
+    CharacterFrame:HookScript("OnHide", clearLabels)
+  elseif CharacterFrame:IsVisible() and (event == "PLAYER_EQUIPMENT_CHANGED" or event == "UNIT_INVENTORY_CHANGED") then
     debouncedUpdate()
+  elseif event == "PLAYER_ENTERING_WORLD" then
+    if CharacterFrame:IsVisible() then
+      debouncedUpdate()
+    end
   end
 end)
-
