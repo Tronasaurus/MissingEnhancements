@@ -1,3 +1,4 @@
+
 local TAILORING_CLOAK_ENCHANTS = {
   "Lightweave", "Swordguard", "Darkglow", "Embroidery",
   "Master's Inscription", "Shadowleather", "Zebraweave",
@@ -11,26 +12,26 @@ local SHIELD_ENHANCEMENTS = {
   "when you block", "Deals damage"
 }
 
+local ENGINEERING_TINKER_ENCHANT_IDS = {
+  ["3599"] = true, ["3601"] = true, ["3603"] = true, ["4256"] = true,
+  ["5473"] = true, ["5474"] = true, ["8503"] = true, ["8220"] = true,
+  ["8243"] = true, ["9273"] = true
+}
+
 local SLOT_FRAMES = {
-  [1] = "CharacterHeadSlot",
-  [3] = "CharacterShoulderSlot",
-  [5] = "CharacterChestSlot",
-  [6] = "CharacterWaistSlot",
-  [7] = "CharacterLegsSlot",
-  [8] = "CharacterFeetSlot",
-  [9] = "CharacterWristSlot",
-  [10] = "CharacterHandsSlot",
-  [11] = "CharacterFinger0Slot",
-  [12] = "CharacterFinger1Slot",
-  [15] = "CharacterBackSlot",
-  [16] = "CharacterMainHandSlot",
+  [1] = "CharacterHeadSlot", [3] = "CharacterShoulderSlot",
+  [5] = "CharacterChestSlot", [6] = "CharacterWaistSlot",
+  [7] = "CharacterLegsSlot", [8] = "CharacterFeetSlot",
+  [9] = "CharacterWristSlot", [10] = "CharacterHandsSlot",
+  [11] = "CharacterFinger0Slot", [12] = "CharacterFinger1Slot",
+  [15] = "CharacterBackSlot", [16] = "CharacterMainHandSlot",
   [17] = "CharacterSecondaryHandSlot"
 }
 
 local SLOT_IS_LEFT = {
-  [1] = true, [3] = true, [5] = true, [6] = true,
-  [7] = true, [8] = true, [9] = true, [10] = true,
-  [11] = true, [12] = true
+  [1] = true, [3] = true, [5] = true, [6] = false, [7] = false,
+  [8] = false, [9] = true, [10] = false, [11] = false, [12] = false,
+  [15] = true, [16] = true, [17] = false
 }
 
 local labels = {}
@@ -58,15 +59,18 @@ tooltip:SetOwner(UIParent, "ANCHOR_NONE")
 
 local function tooltipContains(slot, phrases)
   tooltip:ClearLines()
-  tooltip:SetInventoryItem("player", slot)
-
-  for i = 2, tooltip:NumLines() do
+  local success = pcall(tooltip.SetInventoryItem, tooltip, "player", slot)
+  if not success then return false end
+  local lines = tooltip:NumLines()
+  if lines == 0 then return false end
+  for i = 2, math.min(lines, 30) do
     local line = _G["MissingEnhancementsScannerTooltipTextLeft" .. i]
     if line then
       local text = line:GetText()
       if text then
+        text = text:lower()
         for _, phrase in ipairs(phrases) do
-          if text:find(phrase) then
+          if text:find(phrase:lower(), 1, true) then
             return true
           end
         end
@@ -77,15 +81,25 @@ local function tooltipContains(slot, phrases)
 end
 
 local function isBeltMissingTinker()
-  return not tooltipContains(6, { "Tinker", "Use:" })
+  local link = GetInventoryItemLink("player", 6)
+  local enchantID = getEnchantIDFromLink(link)
+  if ENGINEERING_TINKER_ENCHANT_IDS[enchantID] then return false end
+  return not tooltipContains(6, {
+    "Tinker", "Use:", "Nitro Boosts", "Synapse Springs", "Frag Belt",
+    "Phase Fingers", "Flexweave", "Springy Arachnoweave", "EMP Generator",
+    "Cardboard Assassin", "Spinal Healing Injector", "Goblin Glider"
+  })
 end
+
 
 local function isCloakMissingTailoring()
   return not tooltipContains(15, TAILORING_CLOAK_ENCHANTS)
 end
 
 local function isCloakMissingTinker()
-  return not tooltipContains(15, { "Tinker", "Use:", "Nitro Boosts", "Synapse Springs" })
+  return not tooltipContains(15, {
+    "Tinker", "Use:", "Nitro Boosts", "Synapse Springs"
+  })
 end
 
 local function isCloakMissingEnchant()
@@ -197,7 +211,7 @@ local function updateTextLabels()
 
           for i, text in ipairs(labelList) do
             local label = slotFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            label:SetTextColor(1, 0.5, 0, 1) -- Legendary orange
+            label:SetTextColor(1, 0.5, 0, 1)
             label:SetScale(0.9)
             label:SetShadowColor(0, 0, 0, 1)
             label:SetShadowOffset(1, -1)
@@ -209,12 +223,10 @@ local function updateTextLabels()
               point, relativePoint, xOffset = "RIGHT", "LEFT", 4
             elseif slotID == 17 then
               point, relativePoint, xOffset = "LEFT", "RIGHT", 4
+            elseif SLOT_IS_LEFT[slotID] then
+              point, relativePoint, xOffset = "LEFT", "RIGHT", 4
             else
-              if SLOT_IS_LEFT[slotID] then
-                point, relativePoint, xOffset = "LEFT", "RIGHT", 4
-              else
-                point, relativePoint, xOffset = "RIGHT", "LEFT", -4
-              end
+              point, relativePoint, xOffset = "RIGHT", "LEFT", -4
             end
 
             local verticalOffset
@@ -245,7 +257,6 @@ local function updateTextLabels()
 end
 
 local debounceTimer = nil
-
 local function debouncedUpdate()
   if debounceTimer then
     debounceTimer:Cancel()
