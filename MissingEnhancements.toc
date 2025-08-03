@@ -1,0 +1,7 @@
+## Interface: 50400
+## Title: MissingEnhancements
+## Notes: Shows text next to unenchanted or untinkered gear in the character sheet
+## Author: Tronasaurus@Discord
+## Version: 1.0
+
+MissingEnhancements.lua
