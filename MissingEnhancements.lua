@@ -1,3 +1,23 @@
+local fontStringPool = {}
+
+local function getFontString(slotFrame)
+  if #fontStringPool > 0 then
+    local fs = table.remove(fontStringPool)
+    fs:SetParent(slotFrame)
+    return fs
+  else
+    return slotFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  end
+end
+
+local function recycleFontString(fs)
+  fs:ClearAllPoints()
+  fs:SetText("")
+  fs:Hide()
+  fs:SetParent(nil)
+  table.insert(fontStringPool, fs)
+end
+
 
 local TAILORING_CLOAK_ENCHANTS = {
   "Lightweave", "Swordguard", "Darkglow", "Embroidery",
@@ -210,7 +230,7 @@ local function updateTextLabels()
           labels[slotID] = {}
 
           for i, text in ipairs(labelList) do
-            local label = slotFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            local label = getFontString(slotFrame)
             label:SetTextColor(1, 0.5, 0, 1)
             label:SetScale(0.9)
             label:SetShadowColor(0, 0, 0, 1)
