@@ -1,4 +1,4 @@
--- Add new full lists
+
 local TAILORING_CLOAK_ENCHANTS = {
   "Lightweave", "Swordguard", "Darkglow", "Embroidery",
   "Master's Inscription", "Shadowleather", "Zebraweave",
@@ -98,8 +98,11 @@ local function isShield()
 end
 
 local function isShieldMissingEnhancement()
-  return not tooltipContains(17, SHIELD_ENHANCEMENTS)
+  local link = GetInventoryItemLink("player", 17)
+  local enchantID = getEnchantIDFromLink(link)
+  return enchantID == nil or enchantID == "0" or enchantID == ""
 end
+
 
 local function isWeaponMissingEnchant(slotID)
   local link = GetInventoryItemLink("player", slotID)
