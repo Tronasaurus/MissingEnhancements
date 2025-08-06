@@ -20,8 +20,7 @@ end
 
 
 local TAILORING_CLOAK_ENCHANTS = {
-  "Lightweave", "Swordguard", "Darkglow", "Embroidery",
-  "Master's", "Sanctified"
+  "Lightweave", "Swordguard", "Darkglow", 
 }
 
 local SHIELD_ENHANCEMENTS = {
