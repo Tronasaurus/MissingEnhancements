@@ -21,8 +21,7 @@ end
 
 local TAILORING_CLOAK_ENCHANTS = {
   "Lightweave", "Swordguard", "Darkglow", "Embroidery",
-  "Master's Inscription", "Shadowleather", "Zebraweave",
-  "Glorious Stats", "Superior Intellect"
+  "Master's", "Sanctified"
 }
 
 local SHIELD_ENHANCEMENTS = {
